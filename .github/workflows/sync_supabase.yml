@@ -1,0 +1,32 @@
+name: Sync Supabase to GitHub Repo
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Latest Lessons from Supabase
+        run: |
+          curl -s -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/lessons?select=id,category_id,data" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -o app_data.json
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add app_data.json
+          git status
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update app_data.json from Supabase" && git push)
+          
